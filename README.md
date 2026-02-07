@@ -1,42 +1,20 @@
-# Gemini Chatbot Pro 🤖✨
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-A modern AI chatbot built with **React**, **TypeScript**, and **Vite**, powered by **Google Gemini API**.  
-This project demonstrates a clean chat UI, reusable components, and a simple service layer for interacting with Gemini models.
+# Run and deploy your AI Studio app
 
----
+This contains everything you need to run your app locally.
 
-## 🚀 Features
+View your app in AI Studio: https://ai.studio/apps/temp/1
 
-- 💬 Real-time chat interface
-- 🧠 Powered by Google Gemini
-- ⚡ Fast development with Vite
-- 🧩 Modular React components
-- 🔐 Environment-based API key configuration
-- 🎨 Clean and minimal UI
+## Run Locally
 
----
+**Prerequisites:**  Node.js
 
-## 🛠 Tech Stack
 
-- **React**
-- **TypeScript**
-- **Vite**
-- **Google Gemini API**
-
----
-
-## 📁 Project Structure
-
-├── components/
-│ ├── ChatInput.tsx
-│ └── ChatMessage.tsx
-├── services/
-│ └── geminiService.ts
-├── App.tsx
-├── index.tsx
-├── index.html
-├── types.ts
-├── vite.config.ts
-├── tsconfig.json
-├── .env.local
-└── package.json
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`
