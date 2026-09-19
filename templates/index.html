@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Assistant</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-top">
+                <div class="brand-row">
+                    <span class="brand-icon">◌</span>
+                    <span class="brand-name">Chat Assistant</span>
+                </div>
+                <button type="button" class="new-chat-btn">+ New Chat</button>
+            </div>
+
+            <div class="history-heading">Recent searches</div>
+            <div id="history-list" class="history-list"></div>
+        </aside>
+
+        <main class="chat-panel">
+            <div class="topbar">
+                <div class="title-wrap">
+                    <span class="title-dot"></span>
+                    <h1>Chat Assistant</h1>
+                </div>
+                <button type="button" class="menu-btn">⋯</button>
+            </div>
+
+            <div id="chat-box" class="chat-box">
+                <div class="bot-message">
+                    <b>Assistant:</b> Hello! How can I help you today?
+                </div>
+            </div>
+
+            <form id="chat-form" class="input-area">
+                <input
+                    type="text"
+                    id="message"
+                    placeholder="Type your message..."
+                    autocomplete="off"
+                >
+                <button type="submit">Send</button>
+            </form>
+        </main>
+    </div>
+
+    <div id="history-context-menu" class="history-context-menu" role="menu" hidden>
+        <button type="button" id="rename-history-action" role="menuitem">Rename</button>
+        <button type="button" id="delete-history-action" role="menuitem">Delete</button>
+    </div>
+
+    <script src="../static/script.js"></script>
+</body>
+
+</html>
+
