@@ -1,6 +1,7 @@
 import json
 import os
 import sqlite3
+import tempfile
 from pathlib import Path
 from urllib import error as urllib_error
 from urllib import request as urllib_request
@@ -11,7 +12,11 @@ from flask import Flask, jsonify, render_template, request
 load_dotenv()
 
 app = Flask(__name__)
-DB_PATH = Path(__file__).with_name("chat_history.db")
+DB_PATH = Path(
+    Path(tempfile.gettempdir()) / "chat_history.db"
+    if os.getenv("VERCEL")
+    else Path(__file__).with_name("chat_history.db")
+)
 API_PROVIDER = "openrouter"
 API_KEY = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
 OPENROUTER_MODEL = os.getenv(
