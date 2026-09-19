@@ -54,4 +54,4 @@ Live Application
 
 Visit the deployed application:
 
-Chat Assistant
+https://ai-chat-one-brown.vercel.app/
