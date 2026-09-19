@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 
 load_dotenv()
-
 app = Flask(__name__)
 DB_PATH = Path(
     Path(tempfile.gettempdir()) / "chat_history.db"
@@ -43,20 +42,41 @@ def init_db():
             CREATE TABLE IF NOT EXISTS search_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 message TEXT NOT NULL,
+                conversation TEXT DEFAULT '[]',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """
         )
+        try:
+            conn.execute(
+                "ALTER TABLE search_history ADD COLUMN conversation TEXT DEFAULT '[]'"
+            )
+        except sqlite3.OperationalError:
+            pass
         conn.commit()
 
 
 def get_recent_history(limit=8):
     with get_db_connection() as conn:
         rows = conn.execute(
-            "SELECT id, message FROM search_history ORDER BY id DESC LIMIT ?",
+            "SELECT id, message, conversation FROM search_history ORDER BY id DESC LIMIT ?",
             (limit,),
         ).fetchall()
-    return [{"id": row["id"], "message": row["message"]} for row in rows]
+    history = []
+    for row in rows:
+        conversation = row["conversation"] or "[]"
+        try:
+            parsed = json.loads(conversation)
+        except (TypeError, ValueError):
+            parsed = []
+        history.append(
+            {
+                "id": row["id"],
+                "message": row["message"],
+                "conversation": parsed,
+            }
+        )
+    return history
 
 
 def call_openrouter(message):
@@ -161,19 +181,38 @@ def delete_history(history_id):
 def chat():
     data = request.get_json(silent=True) or {}
     message = (data.get("message") or "").strip()
+    conversation = data.get("conversation") or []
 
     if not message:
         return jsonify({"reply": "Please type a message first."}), 400
 
+    if not isinstance(conversation, list):
+        conversation = []
+
+    safe_conversation = []
+    for item in conversation:
+        if isinstance(item, dict) and "role" in item and "content" in item:
+            safe_conversation.append({
+                "role": item["role"],
+                "content": str(item["content"]),
+            })
+
+    safe_conversation.append({"role": "user", "content": message})
+    reply = get_ai_reply(message)
+    safe_conversation.append({"role": "bot", "content": reply})
+
     with get_db_connection() as conn:
         conn.execute(
-            "INSERT INTO search_history (message) VALUES (?)",
-            (message,),
+            "INSERT INTO search_history (message, conversation) VALUES (?, ?)",
+            (message, json.dumps(safe_conversation)),
         )
         conn.commit()
 
-    reply = get_ai_reply(message)
-    return jsonify({"reply": reply, "history": get_recent_history()})
+    return jsonify({
+        "reply": reply,
+        "conversation": safe_conversation,
+        "history": get_recent_history(),
+    })
 
 
 if __name__ == "__main__":
