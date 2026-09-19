@@ -5,11 +5,60 @@ const chatForm = document.getElementById("chat-form");
 const historyContextMenu = document.getElementById("history-context-menu");
 const renameHistoryAction = document.getElementById("rename-history-action");
 const deleteHistoryAction = document.getElementById("delete-history-action");
+const HISTORY_STORAGE_KEY = "chatAssistantHistoryV1";
+const CURRENT_CONVERSATION_KEY = "chatAssistantCurrentConversationV1";
 let contextHistoryEntry = null;
 let activeConversation = [];
 
+function getStoredHistory() {
+    try {
+        const value = localStorage.getItem(HISTORY_STORAGE_KEY);
+        if (!value) {
+            return [];
+        }
+
+        const parsedValue = JSON.parse(value);
+        return Array.isArray(parsedValue) ? parsedValue : [];
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+}
+
+function saveStoredHistory(history) {
+    try {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+function loadCurrentConversation() {
+    try {
+        const value = localStorage.getItem(CURRENT_CONVERSATION_KEY);
+        if (!value) {
+            return [];
+        }
+
+        const parsedValue = JSON.parse(value);
+        return Array.isArray(parsedValue) ? parsedValue : [];
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+}
+
+function saveCurrentConversation(conversation) {
+    try {
+        localStorage.setItem(CURRENT_CONVERSATION_KEY, JSON.stringify(conversation));
+    } catch (error) {
+        console.error(error);
+    }
+}
+
 function renderConversation(conversation) {
     chatBox.innerHTML = "";
+    saveCurrentConversation(conversation);
 
     const messages = Array.isArray(conversation) && conversation.length
         ? conversation
@@ -26,6 +75,8 @@ function renderConversation(conversation) {
 }
 
 async function loadHistory() {
+    let history = getStoredHistory();
+
     try {
         const response = await fetch("/history");
         if (!response.ok) {
@@ -33,51 +84,61 @@ async function loadHistory() {
         }
 
         const data = await response.json();
-        const history = data.history || [];
-
-        historyList.innerHTML = "";
-
-        if (!history.length) {
-            const empty = document.createElement("div");
-            empty.className = "empty-history";
-            empty.textContent = "No searches yet";
-            historyList.appendChild(empty);
-            return;
-        }
-
-        history.forEach((entry) => {
-            const row = document.createElement("div");
-            row.className = "history-row";
-
-            const selectButton = document.createElement("button");
-            selectButton.type = "button";
-            selectButton.className = "history-item";
-            const entryMessage = entry.message || "Conversation";
-            selectButton.textContent = entryMessage.length > 40
-                ? `${entryMessage.slice(0, 40)}...`
-                : entryMessage;
-            selectButton.title = "Open this previous chat";
-            selectButton.addEventListener("click", () => {
-                const savedConversation = Array.isArray(entry.conversation) && entry.conversation.length
-                    ? entry.conversation
-                    : [{ role: "user", content: entryMessage }];
-                activeConversation = savedConversation;
-                renderConversation(savedConversation);
-                messageInput.focus();
-            });
-
-            row.addEventListener("contextmenu", (event) => {
-                event.preventDefault();
-                contextHistoryEntry = entry;
-                showHistoryContextMenu(event.clientX, event.clientY);
-            });
-
-            row.append(selectButton);
-            historyList.appendChild(row);
-        });
+        history = data.history || history;
     } catch (error) {
         console.error(error);
+        history = history.length ? history : getStoredHistory();
     }
+
+    const normalizedHistory = (history || []).map((entry) => ({
+        id: entry.id ?? Date.now() + Math.random(),
+        message: entry.message || "Conversation",
+        conversation: Array.isArray(entry.conversation) && entry.conversation.length
+            ? entry.conversation
+            : [{ role: "user", content: entry.message || "Conversation" }],
+    }));
+
+    saveStoredHistory(normalizedHistory);
+    historyList.innerHTML = "";
+
+    if (!normalizedHistory.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-history";
+        empty.textContent = "No searches yet";
+        historyList.appendChild(empty);
+        return;
+    }
+
+    normalizedHistory.forEach((entry) => {
+        const row = document.createElement("div");
+        row.className = "history-row";
+
+        const selectButton = document.createElement("button");
+        selectButton.type = "button";
+        selectButton.className = "history-item";
+        const entryMessage = entry.message || "Conversation";
+        selectButton.textContent = entryMessage.length > 40
+            ? `${entryMessage.slice(0, 40)}...`
+            : entryMessage;
+        selectButton.title = "Open this previous chat";
+        selectButton.addEventListener("click", () => {
+            const savedConversation = Array.isArray(entry.conversation) && entry.conversation.length
+                ? entry.conversation
+                : [{ role: "user", content: entryMessage }];
+            activeConversation = savedConversation;
+            renderConversation(savedConversation);
+            messageInput.focus();
+        });
+
+        row.addEventListener("contextmenu", (event) => {
+            event.preventDefault();
+            contextHistoryEntry = entry;
+            showHistoryContextMenu(event.clientX, event.clientY);
+        });
+
+        row.append(selectButton);
+        historyList.appendChild(row);
+    });
 }
 
 async function updateHistory(id, method, message) {
@@ -176,6 +237,8 @@ async function sendMessage(event) {
 
     const conversationToSend = [...(Array.isArray(activeConversation) ? activeConversation : [])];
     conversationToSend.push({ role: "user", content: message });
+    activeConversation = conversationToSend;
+    saveCurrentConversation(activeConversation);
 
     addMessage(message, "user");
     messageInput.value = "";
@@ -196,6 +259,7 @@ async function sendMessage(event) {
         const data = await response.json();
         const updatedConversation = Array.isArray(data.conversation) ? data.conversation : conversationToSend.concat([{ role: "bot", content: data.reply }]);
         activeConversation = updatedConversation;
+        saveCurrentConversation(activeConversation);
         addMessage(data.reply, "bot");
         await loadHistory();
     } catch (error) {
@@ -208,9 +272,11 @@ chatForm.addEventListener("submit", sendMessage);
 
 document.querySelector(".new-chat-btn").addEventListener("click", () => {
     activeConversation = [];
+    saveCurrentConversation(activeConversation);
     chatBox.innerHTML = '<div class="bot-message"><b>Assistant:</b> Hello! How can I help you today?</div>';
     messageInput.focus();
 });
 
-renderConversation([]);
+activeConversation = loadCurrentConversation();
+renderConversation(activeConversation);
 loadHistory();
