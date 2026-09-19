@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: ai-chat
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: inclusionai/ling-3.0-flash-vl:free
