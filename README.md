@@ -54,4 +54,5 @@ Live Application
 
 Visit the deployed application:
 
-https://ai-chat-one-brown.vercel.app/
+https://ai-chat-one-brown.vercel.app/(vercel)
+https://ai-chat-6qs7.onrender.com/(render)
